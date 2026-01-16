@@ -2,11 +2,23 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Loader2, Send, Trophy, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  Trophy,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { useSetType } from "@/components/set-type-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -78,20 +90,99 @@ export default function EvaluatePage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to submit evaluation");
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response is not JSON, create a generic error
+          errorData = {
+            error: `Server error (${response.status}). Please try again.`,
+            errorCode: "HTTP_ERROR",
+          };
+        }
+
+        // Show specific error messages based on error code
+        switch (errorData.errorCode) {
+          case "RATE_LIMIT":
+            toast.error(
+              `Submission limit exceeded! You've reached the maximum number of submissions for ${setTypeLabels[setType]}.`,
+              { duration: 6000 }
+            );
+            break;
+          case "MISSING_CONVERSATIONS":
+            toast.error(
+              "Missing conversations! You need at least one completed conversation for each student-topic pair before evaluating.",
+              { duration: 6000 }
+            );
+            break;
+          case "VALIDATION_ERROR":
+            toast.error(
+              "Invalid request. Please ensure all conversations in your batch are completed.",
+              { duration: 5000 }
+            );
+            break;
+          case "DATABASE_ERROR":
+            toast.error(
+              "Evaluation was successful but failed to save. Please try again.",
+              { duration: 5000 }
+            );
+            break;
+          case "API_KEY_MISSING":
+            toast.error(
+              "API key is not configured. Please contact the administrator.",
+              { duration: 6000 }
+            );
+            break;
+          case "API_ERROR":
+            toast.error(
+              errorData.error ||
+                "API error occurred. Please check your API key and try again.",
+              { duration: 6000 }
+            );
+            break;
+          case "HTTP_ERROR":
+            toast.error(
+              errorData.error ||
+                "Server error occurred. Please try again later.",
+              { duration: 5000 }
+            );
+            break;
+          default:
+            toast.error(
+              errorData.error ||
+                "Failed to submit evaluation. Please try again.",
+              { duration: 5000 }
+            );
+        }
+        return;
       }
 
       const data = await response.json();
       toast.success(
-        `Evaluation submitted! Score: ${data.result.score.toFixed(2)}/5.0`
+        `Evaluation submitted! Score: ${data.result.score.toFixed(2)}/5.0${
+          data.result.submissions_remaining !== null
+            ? ` (${data.result.submissions_remaining} submissions remaining)`
+            : ""
+        }`,
+        { duration: 5000 }
       );
       fetchData();
     } catch (error) {
       console.error("Error submitting evaluation:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to submit evaluation"
-      );
+
+      // Handle network errors
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        toast.error(
+          "Network error: Could not connect to the server. Please check your internet connection and try again.",
+          { duration: 6000 }
+        );
+      } else {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to submit evaluation. Please check your connection and try again.";
+        toast.error(errorMessage, { duration: 6000 });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -99,9 +190,10 @@ export default function EvaluatePage() {
 
   // Filter evaluations for current set type
   const filteredEvaluations = evaluations.filter((e) => e.set_type === setType);
-  const bestScore = filteredEvaluations.length > 0
-    ? Math.max(...filteredEvaluations.map((e) => e.score))
-    : null;
+  const bestScore =
+    filteredEvaluations.length > 0
+      ? Math.max(...filteredEvaluations.map((e) => e.score))
+      : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -140,7 +232,8 @@ export default function EvaluatePage() {
                     <Badge>{latestBatch.name}</Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <strong>Conversations:</strong> {latestBatch.total_conversations}
+                    <strong>Conversations:</strong>{" "}
+                    {latestBatch.total_conversations}
                   </div>
                   <Separator />
                   <div className="text-sm">
@@ -160,10 +253,13 @@ export default function EvaluatePage() {
                 <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
                   <div className="flex items-center gap-2 text-amber-700">
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="font-medium">No completed batch found</span>
+                    <span className="font-medium">
+                      No completed batch found
+                    </span>
                   </div>
                   <p className="mt-1 text-sm text-amber-600">
-                    Please run a batch conversation first before submitting an evaluation.
+                    Please run a batch conversation first before submitting an
+                    evaluation.
                   </p>
                 </div>
               )}
