@@ -7,6 +7,8 @@ import type {
   StartConversationResponse,
   InteractRequest,
   InteractResponse,
+  LeaderboardResponse,
+  CombinedLeaderboardResponse,
 } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://knowunity-agent-olympics-2026-api.vercel.app'
@@ -89,4 +91,20 @@ export async function sendMessage(request: InteractRequest): Promise<InteractRes
 // Health check
 export async function healthCheck() {
   return fetchPublic('/health')
+}
+
+// Leaderboard endpoints (public)
+export async function getInferenceLeaderboard(setType?: SetType): Promise<LeaderboardResponse> {
+  const params = setType ? `?set_type=${setType}` : ''
+  return fetchPublic(`/evaluate/leaderboard/inference${params}`)
+}
+
+export async function getTutoringLeaderboard(setType?: SetType): Promise<LeaderboardResponse> {
+  const params = setType ? `?set_type=${setType}` : ''
+  return fetchPublic(`/evaluate/leaderboard/tutoring${params}`)
+}
+
+export async function getCombinedLeaderboard(setType?: SetType): Promise<CombinedLeaderboardResponse> {
+  const params = setType ? `?set_type=${setType}` : ''
+  return fetchPublic(`/evaluate/leaderboard/combined${params}`)
 }

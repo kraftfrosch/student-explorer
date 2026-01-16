@@ -85,3 +85,32 @@ export interface Message {
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
 }
+
+// Leaderboard Types
+export interface LeaderboardEntry {
+  team_id: string;
+  team_name: string;
+  score: number;
+  submission_count: number;
+  last_updated: string;
+}
+
+export interface CombinedLeaderboardEntry {
+  team_id: string;
+  team_name: string;
+  score: number;
+  inference_rank: number;
+  tutoring_rank: number;
+  submission_count: number;
+  last_updated: string;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  updated_at: string;
+}
+
+export interface CombinedLeaderboardResponse {
+  entries: CombinedLeaderboardEntry[];
+  updated_at: string;
+}
