@@ -3,8 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
+import { AppHeader } from "@/components/app-header";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { StartConversationModal } from "@/components/chat/start-conversation-modal";
@@ -60,11 +59,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <h1 className="text-lg font-semibold">Conversations</h1>
-      </header>
+      <AppHeader title="Conversations" />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-80 shrink-0 border-r">

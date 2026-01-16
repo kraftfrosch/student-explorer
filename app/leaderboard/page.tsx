@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSetType } from "@/components/set-type-provider";
+import { AppHeader } from "@/components/app-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -196,16 +197,19 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-6 p-6">
-      <div className="flex items-center gap-3">
-        <Trophy className="h-8 w-8 text-amber-500" />
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
-          <p className="text-muted-foreground">
-            Agent Olympics 2026 competition rankings
-          </p>
+    <div className="flex h-full flex-col">
+      <AppHeader title="Leaderboard" />
+      
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Trophy className="h-8 w-8 text-amber-500" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
+            <p className="text-muted-foreground">
+              Agent Olympics 2026 competition rankings
+            </p>
+          </div>
         </div>
-      </div>
 
       <Card>
         <CardHeader className="pb-3">
@@ -255,6 +259,7 @@ export default function LeaderboardPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
