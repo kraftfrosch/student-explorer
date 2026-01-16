@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSetType } from "@/components/set-type-provider";
-import type { Student, Topic } from "@/lib/types";
+import type { Student, Topic, Batch } from "@/lib/types";
 
 interface StartConversationModalProps {
   open: boolean;
@@ -75,6 +75,7 @@ export function StartConversationModal({
     DEFAULT_INITIAL_MESSAGE
   );
   const [batchName, setBatchName] = React.useState("");
+  const [latestBatch, setLatestBatch] = React.useState<Batch | null>(null);
 
   // Reset state when modal opens/closes
   React.useEffect(() => {
@@ -82,6 +83,7 @@ export function StartConversationModal({
       setSelectedStudentId(initialStudentId || "");
       setSelectedTopicId(initialTopicId || "");
       setMode("manual");
+      // Defaults will be set by the latest batch fetch effect if in batch mode
       setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
       setInitialMessage(DEFAULT_INITIAL_MESSAGE);
       const now = new Date();
@@ -90,8 +92,46 @@ export function StartConversationModal({
         minute: "2-digit",
       });
       setBatchName(`Batch ${setTypeLabels[setType]} ${timeStr}`);
+    } else {
+      // Reset latest batch when modal closes
+      setLatestBatch(null);
     }
   }, [open, initialStudentId, initialTopicId, setType]);
+
+  // Fetch latest batch when modal opens to get default prompts
+  React.useEffect(() => {
+    if (!open) return;
+
+    async function fetchLatestBatch() {
+      try {
+        const response = await fetch("/api/chat/batch");
+        if (response.ok) {
+          const batches: Batch[] = await response.json();
+          // Find latest batch for current set type (prefer completed, but any batch works)
+          const latest = batches
+            .filter((b) => b.set_type === setType)
+            .sort(
+              (a, b) =>
+                new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+            )[0];
+          if (latest) {
+            setLatestBatch(latest);
+            // Update prompts if we're in batch mode
+            if (mode === "batch") {
+              setSystemPrompt(latest.system_prompt);
+              setInitialMessage(latest.initial_message);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching latest batch:", error);
+        // Don't show error toast, just use defaults
+      }
+    }
+
+    fetchLatestBatch();
+  }, [open, setType, mode]);
 
   // Fetch students when modal opens
   React.useEffect(() => {
@@ -281,7 +321,19 @@ export function StartConversationModal({
 
         <Tabs
           value={mode}
-          onValueChange={(v) => setMode(v as "manual" | "auto" | "batch")}
+          onValueChange={(v) => {
+            const newMode = v as "manual" | "auto" | "batch";
+            setMode(newMode);
+            // When switching to batch mode, use latest batch prompts if available
+            if (newMode === "batch" && latestBatch) {
+              setSystemPrompt(latestBatch.system_prompt);
+              setInitialMessage(latestBatch.initial_message);
+            } else if (newMode === "auto") {
+              // Reset to defaults for auto mode
+              setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+              setInitialMessage(DEFAULT_INITIAL_MESSAGE);
+            }
+          }}
         >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="manual" className="flex items-center gap-2">
