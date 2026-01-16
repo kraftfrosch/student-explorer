@@ -19,6 +19,17 @@ import { generateText } from "ai";
 
 export const maxDuration = 300;
 
+// Helper function to replace variables in prompts
+function replaceVariables(
+  text: string,
+  subject: string,
+  grade: number
+): string {
+  return text
+    .replace(/\{\{subject\}\}/gi, subject)
+    .replace(/\{\{grade\}\}/gi, grade.toString());
+}
+
 async function generateTutorMessage(
   systemPrompt: string,
   conversationHistory: { role: string; content: string }[]
@@ -34,11 +45,10 @@ async function generateTutorMessage(
   })) as Array<{ role: "user" | "assistant"; content: string }>;
 
   const { text } = await generateText({
-    model: openai("gpt-4o"),
+    model: openai("gpt-5.2"),
     system: systemPrompt,
     messages,
     maxOutputTokens: 500,
-    temperature: 0.7,
   });
 
   return text;
@@ -49,10 +59,19 @@ async function runSingleConversation(
   externalConversationId: string,
   systemPrompt: string,
   initialMessage: string,
-  maxTurns: number
+  maxTurns: number,
+  subject: string,
+  grade: number
 ) {
+  // Replace variables in prompts with actual values
+  const resolvedSystemPrompt = replaceVariables(systemPrompt, subject, grade);
+  const resolvedInitialMessage = replaceVariables(
+    initialMessage,
+    subject,
+    grade
+  );
   const conversationHistory: { role: string; content: string }[] = [];
-  let currentMessage = initialMessage;
+  let currentMessage = resolvedInitialMessage;
   let messagesRemaining = maxTurns;
   let isComplete = false;
 
@@ -91,7 +110,7 @@ async function runSingleConversation(
 
       if (!isComplete && messagesRemaining > 0) {
         currentMessage = await generateTutorMessage(
-          systemPrompt,
+          resolvedSystemPrompt,
           conversationHistory
         );
       }
@@ -116,6 +135,8 @@ async function runBatchConversations(
     conversationId: string;
     externalConversationId: string;
     maxTurns: number;
+    subject: string;
+    grade: number;
   }>,
   systemPrompt: string,
   initialMessage: string
@@ -129,7 +150,9 @@ async function runBatchConversations(
         conv.externalConversationId,
         systemPrompt,
         initialMessage,
-        conv.maxTurns
+        conv.maxTurns,
+        conv.subject,
+        conv.grade
       )
     )
   );
@@ -193,7 +216,12 @@ export async function POST(request: NextRequest) {
     // Get all student-topic combinations
     const studentTopicPairs: Array<{
       student: (typeof students)[0];
-      topic: { id: string; name: string; subject_name: string };
+      topic: {
+        id: string;
+        name: string;
+        subject_name: string;
+        grade_level: number;
+      };
     }> = [];
 
     for (const student of students) {
@@ -226,6 +254,8 @@ export async function POST(request: NextRequest) {
       conversationId: string;
       externalConversationId: string;
       maxTurns: number;
+      subject: string;
+      grade: number;
     }> = [];
 
     for (const { student, topic } of studentTopicPairs) {
@@ -256,6 +286,8 @@ export async function POST(request: NextRequest) {
           conversationId: conversation.id,
           externalConversationId: apiResponse.conversation_id,
           maxTurns: apiResponse.max_turns,
+          subject: topic.subject_name,
+          grade: topic.grade_level,
         });
       } catch (error) {
         console.error(

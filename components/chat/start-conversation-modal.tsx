@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useSetType } from "@/components/set-type-provider";
 import type { Student, Topic, Batch } from "@/lib/types";
 
@@ -50,6 +51,13 @@ const setTypeLabels: Record<string, string> = {
   dev: "Development",
   eval: "Evaluation",
 };
+
+// Helper to detect variables in text
+function detectVariables(text: string): { hasSubject: boolean; hasGrade: boolean } {
+  const hasSubject = /\{\{subject\}\}/i.test(text);
+  const hasGrade = /\{\{grade\}\}/i.test(text);
+  return { hasSubject, hasGrade };
+}
 
 export function StartConversationModal({
   open,
@@ -431,7 +439,26 @@ export function StartConversationModal({
 
             <TabsContent value="auto" className="mt-0 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="system-prompt-auto">System Prompt</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="system-prompt-auto">System Prompt</Label>
+                  {(() => {
+                    const vars = detectVariables(systemPrompt);
+                    return (vars.hasSubject || vars.hasGrade) && (
+                      <div className="flex gap-1">
+                        {vars.hasSubject && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{subject}}"}
+                          </Badge>
+                        )}
+                        {vars.hasGrade && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{grade}}"}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <Textarea
                   id="system-prompt-auto"
                   value={systemPrompt}
@@ -443,7 +470,26 @@ export function StartConversationModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="initial-message-auto">First Message</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="initial-message-auto">First Message</Label>
+                  {(() => {
+                    const vars = detectVariables(initialMessage);
+                    return (vars.hasSubject || vars.hasGrade) && (
+                      <div className="flex gap-1">
+                        {vars.hasSubject && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{subject}}"}
+                          </Badge>
+                        )}
+                        {vars.hasGrade && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{grade}}"}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <Textarea
                   id="initial-message-auto"
                   value={initialMessage}
@@ -479,7 +525,26 @@ export function StartConversationModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="system-prompt-batch">System Prompt</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="system-prompt-batch">System Prompt</Label>
+                  {(() => {
+                    const vars = detectVariables(systemPrompt);
+                    return (vars.hasSubject || vars.hasGrade) && (
+                      <div className="flex gap-1">
+                        {vars.hasSubject && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{subject}}"}
+                          </Badge>
+                        )}
+                        {vars.hasGrade && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{grade}}"}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <Textarea
                   id="system-prompt-batch"
                   value={systemPrompt}
@@ -491,7 +556,26 @@ export function StartConversationModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="initial-message-batch">First Message</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="initial-message-batch">First Message</Label>
+                  {(() => {
+                    const vars = detectVariables(initialMessage);
+                    return (vars.hasSubject || vars.hasGrade) && (
+                      <div className="flex gap-1">
+                        {vars.hasSubject && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{subject}}"}
+                          </Badge>
+                        )}
+                        {vars.hasGrade && (
+                          <Badge variant="outline" className="text-xs">
+                            {"{{grade}}"}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <Textarea
                   id="initial-message-batch"
                   value={initialMessage}

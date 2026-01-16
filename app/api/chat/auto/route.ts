@@ -11,6 +11,17 @@ import { generateText } from "ai";
 
 export const maxDuration = 300; // 5 minutes for long-running auto conversations
 
+// Helper function to replace variables in prompts
+function replaceVariables(
+  text: string,
+  subject: string,
+  grade: number
+): string {
+  return text
+    .replace(/\{\{subject\}\}/gi, subject)
+    .replace(/\{\{grade\}\}/gi, grade.toString());
+}
+
 async function generateTutorMessage(
   systemPrompt: string,
   conversationHistory: { role: string; content: string }[]
@@ -26,11 +37,10 @@ async function generateTutorMessage(
   })) as Array<{ role: "user" | "assistant"; content: string }>;
 
   const { text } = await generateText({
-    model: openai("gpt-4o"),
+    model: openai("gpt-5.2"),
     system: systemPrompt,
     messages,
     maxOutputTokens: 500,
-    temperature: 0.7,
   });
 
   return text;
@@ -41,10 +51,15 @@ async function runAutoConversation(
   externalConversationId: string,
   systemPrompt: string,
   initialMessage: string,
-  maxTurns: number
+  maxTurns: number,
+  subject: string,
+  grade: number
 ) {
+  // Replace variables in prompts with actual values
+  const resolvedSystemPrompt = replaceVariables(systemPrompt, subject, grade);
+  const resolvedInitialMessage = replaceVariables(initialMessage, subject, grade);
   const conversationHistory: { role: string; content: string }[] = [];
-  let currentMessage = initialMessage;
+  let currentMessage = resolvedInitialMessage;
   let messagesRemaining = maxTurns;
   let isComplete = false;
 
@@ -88,7 +103,7 @@ async function runAutoConversation(
       // If not complete, generate next tutor message
       if (!isComplete && messagesRemaining > 0) {
         currentMessage = await generateTutorMessage(
-          systemPrompt,
+          resolvedSystemPrompt,
           conversationHistory
         );
       }
@@ -175,7 +190,9 @@ export async function POST(request: NextRequest) {
       apiResponse.conversation_id,
       system_prompt,
       initial_message,
-      apiResponse.max_turns
+      apiResponse.max_turns,
+      topic.subject_name,
+      topic.grade_level
     ).catch((error) => {
       console.error("Background auto conversation error:", error);
     });
