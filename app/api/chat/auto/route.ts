@@ -6,6 +6,8 @@ import {
   updateConversation,
 } from "@/lib/supabase";
 import { getStudentTopics, listStudents } from "@/lib/api";
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
 
 export const maxDuration = 300; // 5 minutes for long-running auto conversations
 
@@ -18,35 +20,20 @@ async function generateTutorMessage(
     throw new Error("OPENAI_API_KEY environment variable is not set");
   }
 
-  const messages = [
-    { role: "system", content: systemPrompt },
-    ...conversationHistory.map((m) => ({
-      role: m.role === "tutor" ? "assistant" : "user",
-      content: m.content,
-    })),
-  ];
+  const messages = conversationHistory.map((m) => ({
+    role: m.role === "tutor" ? "assistant" : "user",
+    content: m.content,
+  })) as Array<{ role: "user" | "assistant"; content: string }>;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${openaiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages,
-      max_tokens: 500,
-      temperature: 0.7,
-    }),
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: systemPrompt,
+    messages,
+    maxOutputTokens: 500,
+    temperature: 0.7,
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API Error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0].message.content;
+  return text;
 }
 
 async function runAutoConversation(
