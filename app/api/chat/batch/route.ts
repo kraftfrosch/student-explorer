@@ -62,8 +62,7 @@ async function runSingleConversation(
   externalConversationId: string,
   systemPrompt: string,
   initialMessage: string,
-  maxTurns: number,
-  batchId: string
+  maxTurns: number
 ) {
   const conversationHistory: { role: string; content: string }[] = [];
   let currentMessage = initialMessage;
@@ -134,26 +133,29 @@ async function runBatchConversations(
   systemPrompt: string,
   initialMessage: string
 ) {
+  // Run all conversations in parallel using Promise.allSettled
+  // This ensures all conversations start simultaneously and we handle failures gracefully
+  const results = await Promise.allSettled(
+    conversations.map((conv) =>
+      runSingleConversation(
+        conv.conversationId,
+        conv.externalConversationId,
+        systemPrompt,
+        initialMessage,
+        conv.maxTurns
+      )
+    )
+  );
+
+  // Count successful completions
   let completed = 0;
-
-  for (const conv of conversations) {
-    const success = await runSingleConversation(
-      conv.conversationId,
-      conv.externalConversationId,
-      systemPrompt,
-      initialMessage,
-      conv.maxTurns,
-      batchId
-    );
-
-    if (success) {
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value === true) {
       completed++;
-      await updateBatch(batchId, {
-        completed_conversations: completed,
-      });
     }
   }
 
+  // Update batch status with final count
   await updateBatch(batchId, {
     status: "completed",
     completed_conversations: completed,
