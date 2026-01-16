@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, Plus } from "lucide-react";
+import { MessageSquare, Plus, Bot, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,12 +117,22 @@ function ConversationItem({
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="font-medium">{conversation.student_name}</span>
+        <div className="flex items-center gap-1.5">
+          {conversation.is_auto &&
+            (conversation.is_running ? (
+              <Loader2 className="h-3.5 w-3.5 text-amber-600 animate-spin" />
+            ) : (
+              <Bot className="h-3.5 w-3.5 text-amber-600" />
+            ))}
+          <span className="font-medium">{conversation.student_name}</span>
+        </div>
         <Badge
           variant={conversation.status === "open" ? "default" : "secondary"}
           className="text-xs"
         >
-          {conversation.messages_remaining} left
+          {conversation.is_running
+            ? "Running..."
+            : `${conversation.messages_remaining} left`}
         </Badge>
       </div>
       <span className="text-sm text-muted-foreground">
@@ -132,9 +142,19 @@ function ConversationItem({
         <span className="text-xs text-muted-foreground">
           {conversation.subject_name}
         </span>
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-          {setTypeLabels[conversation.set_type] || conversation.set_type}
-        </Badge>
+        <div className="flex items-center gap-1">
+          {conversation.is_auto && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600"
+            >
+              Auto
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            {setTypeLabels[conversation.set_type] || conversation.set_type}
+          </Badge>
+        </div>
       </div>
     </Link>
   );

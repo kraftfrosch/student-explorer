@@ -30,23 +30,37 @@ export default function ChatPage() {
   }, [initialStudentId, initialTopicId, router]);
 
   // Fetch conversations
-  React.useEffect(() => {
-    async function fetchConversations() {
-      try {
-        const response = await fetch("/api/chat/conversations");
-        if (!response.ok) throw new Error("Failed to fetch conversations");
-        const data = await response.json();
-        setConversations(data);
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-        toast.error("Failed to load conversations");
-      } finally {
-        setIsLoadingConversations(false);
-      }
+  const fetchConversations = React.useCallback(async (showLoading = true) => {
+    try {
+      const response = await fetch("/api/chat/conversations");
+      if (!response.ok) throw new Error("Failed to fetch conversations");
+      const data = await response.json();
+      setConversations(data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      if (showLoading) toast.error("Failed to load conversations");
+    } finally {
+      if (showLoading) setIsLoadingConversations(false);
     }
-
-    fetchConversations();
   }, []);
+
+  React.useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Poll for updates while any conversation is running
+  const hasRunningConversation = conversations.some((c) => c.is_running);
+  
+  React.useEffect(() => {
+    if (!hasRunningConversation) return;
+
+    const pollInterval = setInterval(() => {
+      fetchConversations(false);
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [hasRunningConversation, fetchConversations]);
 
   const handleConversationStarted = (conversationId: string) => {
     // Refresh conversations and navigate to the new one

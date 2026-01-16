@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Send, Loader2 } from "lucide-react"
+import { Send, Loader2, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -61,8 +61,9 @@ export function ChatInterface({
     )
   }
 
+  const isRunning = conversation.is_running
   const isDisabled =
-    conversation.status === "closed" || conversation.messages_remaining <= 0
+    conversation.status === "closed" || conversation.messages_remaining <= 0 || isRunning
 
   return (
     <div className="flex h-full flex-col">
@@ -75,6 +76,12 @@ export function ChatInterface({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isRunning && (
+            <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 animate-pulse">
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              AI Running
+            </Badge>
+          )}
           <Badge
             variant={conversation.status === "open" ? "default" : "secondary"}
           >
@@ -103,9 +110,14 @@ export function ChatInterface({
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
-            {isSending && (
-              <div className="flex justify-center">
+            {(isSending || isRunning) && (
+              <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                {isRunning && (
+                  <span className="text-sm text-muted-foreground">
+                    AI is tutoring...
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -114,7 +126,13 @@ export function ChatInterface({
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="border-t p-4">
-        {isDisabled && (
+        {isRunning && (
+          <div className="mb-2 flex items-center justify-center gap-2 rounded-lg bg-amber-500/10 p-2 text-sm text-amber-700">
+            <Bot className="h-4 w-4" />
+            AI is running this conversation automatically
+          </div>
+        )}
+        {!isRunning && isDisabled && (
           <p className="mb-2 text-center text-sm text-muted-foreground">
             This conversation has ended.
           </p>

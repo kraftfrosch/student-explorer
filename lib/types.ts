@@ -70,6 +70,10 @@ export interface Conversation {
   set_type: SetType;
   status: "open" | "closed";
   messages_remaining: number;
+  is_auto: boolean;
+  is_running: boolean;
+  system_prompt?: string;
+  initial_message?: string;
   created_at: string;
   updated_at: string;
 }

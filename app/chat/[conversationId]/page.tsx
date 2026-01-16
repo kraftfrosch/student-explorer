@@ -44,38 +44,67 @@ export default function ConversationPage() {
   }, []);
 
   // Fetch current conversation and messages
-  React.useEffect(() => {
+  const fetchConversationData = React.useCallback(async (showLoading = true) => {
     if (!conversationId) return;
+    
+    if (showLoading) setIsLoadingMessages(true);
+    try {
+      // Fetch conversation details
+      const convResponse = await fetch(
+        `/api/chat/conversations/${conversationId}`
+      );
+      if (!convResponse.ok) throw new Error("Failed to fetch conversation");
+      const conversation = await convResponse.json();
+      setCurrentConversation(conversation);
 
-    async function fetchConversationData() {
-      setIsLoadingMessages(true);
-      try {
-        // Fetch conversation details
-        const convResponse = await fetch(
-          `/api/chat/conversations/${conversationId}`
-        );
-        if (!convResponse.ok) throw new Error("Failed to fetch conversation");
-        const conversation = await convResponse.json();
-        setCurrentConversation(conversation);
-
-        // Fetch messages
-        const msgResponse = await fetch(
-          `/api/chat/conversations/${conversationId}/messages`
-        );
-        if (!msgResponse.ok) throw new Error("Failed to fetch messages");
-        const messages = await msgResponse.json();
-        setMessages(messages);
-      } catch (error) {
-        console.error("Error fetching conversation data:", error);
+      // Fetch messages
+      const msgResponse = await fetch(
+        `/api/chat/conversations/${conversationId}/messages`
+      );
+      if (!msgResponse.ok) throw new Error("Failed to fetch messages");
+      const newMessages = await msgResponse.json();
+      setMessages(newMessages);
+      
+      return conversation;
+    } catch (error) {
+      console.error("Error fetching conversation data:", error);
+      if (showLoading) {
         toast.error("Failed to load conversation");
         router.push("/chat");
-      } finally {
-        setIsLoadingMessages(false);
       }
+    } finally {
+      if (showLoading) setIsLoadingMessages(false);
     }
-
-    fetchConversationData();
   }, [conversationId, router]);
+
+  React.useEffect(() => {
+    fetchConversationData();
+  }, [fetchConversationData]);
+
+  // Poll for updates while conversation is running
+  React.useEffect(() => {
+    if (!currentConversation?.is_running) return;
+
+    const pollInterval = setInterval(async () => {
+      const updatedConversation = await fetchConversationData(false);
+      
+      // Also update the conversations list
+      if (updatedConversation) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversationId ? updatedConversation : c
+          )
+        );
+        
+        // If no longer running, stop polling
+        if (!updatedConversation.is_running) {
+          clearInterval(pollInterval);
+        }
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [currentConversation?.is_running, conversationId, fetchConversationData]);
 
   const handleSendMessage = async (content: string) => {
     if (!currentConversation) return;
