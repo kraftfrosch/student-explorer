@@ -74,6 +74,7 @@ export interface Conversation {
   is_running: boolean;
   system_prompt?: string;
   initial_message?: string;
+  batch_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -89,6 +90,20 @@ export interface Message {
 // Extended types with relations
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
+}
+
+// Batch Types
+export interface Batch {
+  id: string;
+  name: string;
+  set_type: SetType;
+  system_prompt: string;
+  initial_message: string;
+  status: "running" | "completed" | "failed";
+  total_conversations: number;
+  completed_conversations: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // Leaderboard Types

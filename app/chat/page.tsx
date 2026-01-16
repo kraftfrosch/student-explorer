@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/app-header";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { StartConversationModal } from "@/components/chat/start-conversation-modal";
-import type { Conversation } from "@/lib/types";
+import type { Conversation, Batch } from "@/lib/types";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -16,6 +16,7 @@ export default function ChatPage() {
   const initialTopicId = searchParams.get("topic") || undefined;
 
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
+  const [batches, setBatches] = React.useState<Batch[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] =
     React.useState(true);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -24,21 +25,28 @@ export default function ChatPage() {
   React.useEffect(() => {
     if (initialStudentId && initialTopicId) {
       setIsModalOpen(true);
-      // Clear the URL params
       router.replace("/chat");
     }
   }, [initialStudentId, initialTopicId, router]);
 
-  // Fetch conversations
-  const fetchConversations = React.useCallback(async (showLoading = true) => {
+  // Fetch all data
+  const fetchData = React.useCallback(async (showLoading = true) => {
     try {
-      const response = await fetch("/api/chat/conversations");
-      if (!response.ok) throw new Error("Failed to fetch conversations");
-      const data = await response.json();
-      setConversations(data);
-      return data;
+      const [convRes, batchRes] = await Promise.all([
+        fetch("/api/chat/conversations"),
+        fetch("/api/chat/batch"),
+      ]);
+
+      if (!convRes.ok) throw new Error("Failed to fetch conversations");
+      const convData = await convRes.json();
+      setConversations(convData);
+
+      if (batchRes.ok) {
+        const batchData = await batchRes.json();
+        setBatches(batchData);
+      }
     } catch (error) {
-      console.error("Error fetching conversations:", error);
+      console.error("Error fetching data:", error);
       if (showLoading) toast.error("Failed to load conversations");
     } finally {
       if (showLoading) setIsLoadingConversations(false);
@@ -46,29 +54,31 @@ export default function ChatPage() {
   }, []);
 
   React.useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+    fetchData();
+  }, [fetchData]);
 
-  // Poll for updates while any conversation is running
-  const hasRunningConversation = conversations.some((c) => c.is_running);
-  
+  // Poll for updates while any conversation is running or batch is running
+  const anyBatchRunning = batches.some((b) => b.status === "running");
+  const anyConversationRunning = conversations.some((c) => c.is_running);
+  const shouldPoll = anyBatchRunning || anyConversationRunning;
+
   React.useEffect(() => {
-    if (!hasRunningConversation) return;
+    if (!shouldPoll) return;
 
     const pollInterval = setInterval(() => {
-      fetchConversations(false);
+      fetchData(false);
     }, 2000);
 
     return () => clearInterval(pollInterval);
-  }, [hasRunningConversation, fetchConversations]);
+  }, [shouldPoll, fetchData]);
 
   const handleConversationStarted = (conversationId: string) => {
-    // Refresh conversations and navigate to the new one
-    fetch("/api/chat/conversations")
-      .then((res) => res.json())
-      .then(setConversations)
-      .catch(console.error);
+    fetchData(false);
     router.push(`/chat/${conversationId}`);
+  };
+
+  const handleBatchStarted = () => {
+    fetchData(false);
   };
 
   return (
@@ -79,6 +89,7 @@ export default function ChatPage() {
         <div className="w-80 shrink-0 border-r">
           <ConversationList
             conversations={conversations}
+            batches={batches}
             isLoading={isLoadingConversations}
             onNewConversation={() => setIsModalOpen(true)}
           />
@@ -99,6 +110,7 @@ export default function ChatPage() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onConversationStarted={handleConversationStarted}
+        onBatchStarted={handleBatchStarted}
         initialStudentId={initialStudentId}
         initialTopicId={initialTopicId}
       />

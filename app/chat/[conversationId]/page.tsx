@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/app-header";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { StartConversationModal } from "@/components/chat/start-conversation-modal";
-import type { Conversation, Message } from "@/lib/types";
+import type { Conversation, Message, Batch } from "@/lib/types";
 
 export default function ConversationPage() {
   const router = useRouter();
@@ -15,110 +15,105 @@ export default function ConversationPage() {
   const conversationId = params.conversationId as string;
 
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
-  const [currentConversation, setCurrentConversation] =
-    React.useState<Conversation | null>(null);
+  const [batches, setBatches] = React.useState<Batch[]>([]);
+  const [currentConversation, setCurrentConversation] = React.useState<Conversation | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] =
-    React.useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = React.useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = React.useState(true);
   const [isSending, setIsSending] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-  // Fetch all conversations
-  React.useEffect(() => {
-    async function fetchConversations() {
-      try {
-        const response = await fetch("/api/chat/conversations");
-        if (!response.ok) throw new Error("Failed to fetch conversations");
-        const data = await response.json();
-        setConversations(data);
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-        toast.error("Failed to load conversations");
-      } finally {
-        setIsLoadingConversations(false);
-      }
-    }
+  // Fetch all conversations and batches
+  const fetchListData = React.useCallback(async (showLoading = true) => {
+    try {
+      const [convRes, batchRes] = await Promise.all([
+        fetch("/api/chat/conversations"),
+        fetch("/api/chat/batch"),
+      ]);
 
-    fetchConversations();
+      if (!convRes.ok) throw new Error("Failed to fetch conversations");
+      const convData = await convRes.json();
+      setConversations(convData);
+
+      if (batchRes.ok) {
+        const batchData = await batchRes.json();
+        setBatches(batchData);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      if (showLoading) toast.error("Failed to load conversations");
+    } finally {
+      if (showLoading) setIsLoadingConversations(false);
+    }
   }, []);
 
-  // Fetch current conversation and messages
-  const fetchConversationData = React.useCallback(async (showLoading = true) => {
-    if (!conversationId) return;
-    
-    if (showLoading) setIsLoadingMessages(true);
-    try {
-      // Fetch conversation details
-      const convResponse = await fetch(
-        `/api/chat/conversations/${conversationId}`
-      );
-      if (!convResponse.ok) throw new Error("Failed to fetch conversation");
-      const conversation = await convResponse.json();
-      setCurrentConversation(conversation);
+  React.useEffect(() => {
+    fetchListData();
+  }, [fetchListData]);
 
-      // Fetch messages
-      const msgResponse = await fetch(
-        `/api/chat/conversations/${conversationId}/messages`
-      );
-      if (!msgResponse.ok) throw new Error("Failed to fetch messages");
-      const newMessages = await msgResponse.json();
-      setMessages(newMessages);
-      
-      return conversation;
-    } catch (error) {
-      console.error("Error fetching conversation data:", error);
-      if (showLoading) {
-        toast.error("Failed to load conversation");
-        router.push("/chat");
+  // Fetch current conversation and messages
+  const fetchConversationData = React.useCallback(
+    async (showLoading = true) => {
+      if (!conversationId) return;
+
+      if (showLoading) setIsLoadingMessages(true);
+      try {
+        const [convRes, msgRes] = await Promise.all([
+          fetch(`/api/chat/conversations/${conversationId}`),
+          fetch(`/api/chat/conversations/${conversationId}/messages`),
+        ]);
+
+        if (!convRes.ok) throw new Error("Failed to fetch conversation");
+        const conversation = await convRes.json();
+        setCurrentConversation(conversation);
+
+        if (!msgRes.ok) throw new Error("Failed to fetch messages");
+        const newMessages = await msgRes.json();
+        setMessages(newMessages);
+
+        return conversation;
+      } catch (error) {
+        console.error("Error fetching conversation data:", error);
+        if (showLoading) {
+          toast.error("Failed to load conversation");
+          router.push("/chat");
+        }
+      } finally {
+        if (showLoading) setIsLoadingMessages(false);
       }
-    } finally {
-      if (showLoading) setIsLoadingMessages(false);
-    }
-  }, [conversationId, router]);
+    },
+    [conversationId, router]
+  );
 
   React.useEffect(() => {
     fetchConversationData();
   }, [fetchConversationData]);
 
-  // Poll for updates while conversation is running
+  // Poll for updates while any conversation is running or any batch is running
+  const anyBatchRunning = batches.some((b) => b.status === "running");
+  const anyConversationRunning = conversations.some((c) => c.is_running);
+  const shouldPoll = anyBatchRunning || anyConversationRunning || currentConversation?.is_running;
+
   React.useEffect(() => {
-    if (!currentConversation?.is_running) return;
+    if (!shouldPoll) return;
 
     const pollInterval = setInterval(async () => {
-      const updatedConversation = await fetchConversationData(false);
-      
-      // Also update the conversations list
-      if (updatedConversation) {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === conversationId ? updatedConversation : c
-          )
-        );
-        
-        // If no longer running, stop polling
-        if (!updatedConversation.is_running) {
-          clearInterval(pollInterval);
-        }
-      }
-    }, 2000); // Poll every 2 seconds
+      await Promise.all([fetchConversationData(false), fetchListData(false)]);
+    }, 2000);
 
     return () => clearInterval(pollInterval);
-  }, [currentConversation?.is_running, conversationId, fetchConversationData]);
+  }, [shouldPoll, fetchConversationData, fetchListData]);
 
   const handleSendMessage = async (content: string) => {
     if (!currentConversation) return;
 
     setIsSending(true);
     try {
-      const response = await fetch(
-        `/api/chat/conversations/${conversationId}/messages`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content }),
-        }
-      );
+      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: content }),
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -127,10 +122,8 @@ export default function ConversationPage() {
 
       const data = await response.json();
 
-      // Add both tutor and student messages
       setMessages((prev) => [...prev, data.tutorMessage, data.studentMessage]);
 
-      // Update conversation state
       setCurrentConversation((prev) =>
         prev
           ? {
@@ -141,7 +134,6 @@ export default function ConversationPage() {
           : null
       );
 
-      // Update in conversations list
       setConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId
@@ -159,21 +151,19 @@ export default function ConversationPage() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send message"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to send message");
     } finally {
       setIsSending(false);
     }
   };
 
   const handleConversationStarted = (newConversationId: string) => {
-    // Refresh conversations and navigate to the new one
-    fetch("/api/chat/conversations")
-      .then((res) => res.json())
-      .then(setConversations)
-      .catch(console.error);
+    fetchListData(false);
     router.push(`/chat/${newConversationId}`);
+  };
+
+  const handleBatchStarted = () => {
+    fetchListData(false);
   };
 
   return (
@@ -184,6 +174,7 @@ export default function ConversationPage() {
         <div className="w-80 shrink-0 border-r">
           <ConversationList
             conversations={conversations}
+            batches={batches}
             isLoading={isLoadingConversations}
             onNewConversation={() => setIsModalOpen(true)}
           />
@@ -204,6 +195,7 @@ export default function ConversationPage() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onConversationStarted={handleConversationStarted}
+        onBatchStarted={handleBatchStarted}
       />
     </div>
   );
