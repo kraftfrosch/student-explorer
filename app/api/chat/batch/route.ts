@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { startConversation, sendMessage, listStudents, getStudentTopics } from "@/lib/api";
+import {
+  startConversation,
+  sendMessage,
+  listStudents,
+  getStudentTopics,
+} from "@/lib/api";
 import {
   createConversation,
   createMessages,
@@ -36,7 +41,7 @@ async function generateTutorMessage(
       Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-5.2-2025-12-11",
       messages,
       max_tokens: 500,
       temperature: 0.7,
@@ -73,8 +78,16 @@ async function runSingleConversation(
       });
 
       await createMessages([
-        { conversation_id: conversationId, role: "tutor", content: currentMessage },
-        { conversation_id: conversationId, role: "student", content: studentResponse.student_response },
+        {
+          conversation_id: conversationId,
+          role: "tutor",
+          content: currentMessage,
+        },
+        {
+          conversation_id: conversationId,
+          role: "student",
+          content: studentResponse.student_response,
+        },
       ]);
 
       conversationHistory.push(
@@ -91,7 +104,10 @@ async function runSingleConversation(
       });
 
       if (!isComplete && messagesRemaining > 0) {
-        currentMessage = await generateTutorMessage(systemPrompt, conversationHistory);
+        currentMessage = await generateTutorMessage(
+          systemPrompt,
+          conversationHistory
+        );
       }
     }
 
@@ -151,7 +167,10 @@ export async function GET() {
     return NextResponse.json(batches);
   } catch (error) {
     console.error("Error fetching batches:", error);
-    return NextResponse.json({ error: "Failed to fetch batches" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch batches" },
+      { status: 500 }
+    );
   }
 }
 
@@ -163,7 +182,10 @@ export async function POST(request: NextRequest) {
 
     if (!name || !set_type || !system_prompt || !initial_message) {
       return NextResponse.json(
-        { error: "name, set_type, system_prompt, and initial_message are required" },
+        {
+          error:
+            "name, set_type, system_prompt, and initial_message are required",
+        },
         { status: 400 }
       );
     }
@@ -181,7 +203,7 @@ export async function POST(request: NextRequest) {
 
     // Get all student-topic combinations
     const studentTopicPairs: Array<{
-      student: typeof students[0];
+      student: (typeof students)[0];
       topic: { id: string; name: string; subject_name: string };
     }> = [];
 
@@ -247,7 +269,10 @@ export async function POST(request: NextRequest) {
           maxTurns: apiResponse.max_turns,
         });
       } catch (error) {
-        console.error(`Failed to create conversation for ${student.name} - ${topic.name}:`, error);
+        console.error(
+          `Failed to create conversation for ${student.name} - ${topic.name}:`,
+          error
+        );
       }
     }
 
@@ -257,18 +282,24 @@ export async function POST(request: NextRequest) {
     });
 
     // Run all conversations in the background
-    runBatchConversations(batch.id, conversationsData, system_prompt, initial_message).catch(
-      (error) => {
-        console.error("Batch conversation error:", error);
-        updateBatch(batch.id, { status: "failed" }).catch(console.error);
-      }
-    );
+    runBatchConversations(
+      batch.id,
+      conversationsData,
+      system_prompt,
+      initial_message
+    ).catch((error) => {
+      console.error("Batch conversation error:", error);
+      updateBatch(batch.id, { status: "failed" }).catch(console.error);
+    });
 
     return NextResponse.json(batch, { status: 201 });
   } catch (error) {
     console.error("Error creating batch:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create batch" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to create batch",
+      },
       { status: 500 }
     );
   }

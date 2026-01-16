@@ -1,5 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Conversation, Message, Batch } from "./types";
+import type {
+  Conversation,
+  Message,
+  Batch,
+  Evaluation,
+  SetType,
+} from "./types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -138,4 +144,41 @@ export async function updateBatch(id: string, updates: Partial<Batch>) {
 
   if (error) throw error;
   return data as Batch;
+}
+
+export async function getLatestBatchBySetType(setType: SetType) {
+  const { data, error } = await supabase
+    .from("batches")
+    .select("*")
+    .eq("set_type", setType)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows
+  return data as Batch | null;
+}
+
+// Evaluation helpers
+export async function getEvaluations() {
+  const { data, error } = await supabase
+    .from("evaluations")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data as Evaluation[];
+}
+
+export async function createEvaluation(
+  evaluation: Omit<Evaluation, "id" | "created_at">
+) {
+  const { data, error } = await supabase
+    .from("evaluations")
+    .insert(evaluation)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Evaluation;
 }

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, BookOpen, MessageSquare, GraduationCap, Trophy } from "lucide-react"
+import { Users, BookOpen, MessageSquare, GraduationCap, Trophy, Send } from "lucide-react"
 
 import {
   Sidebar,
@@ -43,6 +43,11 @@ const navigation = [
     title: "Conversations",
     href: "/chat",
     icon: MessageSquare,
+  },
+  {
+    title: "Evaluate",
+    href: "/evaluate",
+    icon: Send,
   },
   {
     title: "Leaderboard",

@@ -33,7 +33,7 @@ async function generateTutorMessage(
       Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-5.2-2025-12-11",
       messages,
       max_tokens: 500,
       temperature: 0.7,

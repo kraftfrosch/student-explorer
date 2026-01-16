@@ -106,6 +106,27 @@ export interface Batch {
   updated_at: string;
 }
 
+// Evaluation Types
+export interface Evaluation {
+  id: string;
+  set_type: SetType;
+  batch_id: string | null;
+  score: number;
+  num_conversations: number;
+  submission_number: number;
+  submissions_remaining: number | null;
+  system_prompt: string;
+  initial_message: string;
+  created_at: string;
+}
+
+export interface TutoringEvaluationResult {
+  score: number;
+  num_conversations: number;
+  submission_number: number;
+  submissions_remaining: number | null;
+}
+
 // Leaderboard Types
 export interface LeaderboardEntry {
   team_id: string;

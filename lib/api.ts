@@ -9,6 +9,7 @@ import type {
   InteractResponse,
   LeaderboardResponse,
   CombinedLeaderboardResponse,
+  TutoringEvaluationResult,
 } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://knowunity-agent-olympics-2026-api.vercel.app'
@@ -107,4 +108,12 @@ export async function getTutoringLeaderboard(setType?: SetType): Promise<Leaderb
 export async function getCombinedLeaderboard(setType?: SetType): Promise<CombinedLeaderboardResponse> {
   const params = setType ? `?set_type=${setType}` : ''
   return fetchPublic(`/evaluate/leaderboard/combined${params}`)
+}
+
+// Evaluation submission (requires auth - server-side only)
+export async function submitTutoringEvaluation(setType: SetType): Promise<TutoringEvaluationResult> {
+  return fetchWithAuth('/evaluate/tutoring', {
+    method: 'POST',
+    body: JSON.stringify({ set_type: setType }),
+  })
 }
