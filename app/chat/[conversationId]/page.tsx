@@ -16,9 +16,11 @@ export default function ConversationPage() {
 
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [batches, setBatches] = React.useState<Batch[]>([]);
-  const [currentConversation, setCurrentConversation] = React.useState<Conversation | null>(null);
+  const [currentConversation, setCurrentConversation] =
+    React.useState<Conversation | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] = React.useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] =
+    React.useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = React.useState(true);
   const [isSending, setIsSending] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -92,7 +94,10 @@ export default function ConversationPage() {
   // Poll for updates while any conversation is running or any batch is running
   const anyBatchRunning = batches.some((b) => b.status === "running");
   const anyConversationRunning = conversations.some((c) => c.is_running);
-  const shouldPoll = anyBatchRunning || anyConversationRunning || currentConversation?.is_running;
+  const shouldPoll =
+    anyBatchRunning ||
+    anyConversationRunning ||
+    currentConversation?.is_running;
 
   React.useEffect(() => {
     if (!shouldPoll) return;
@@ -109,11 +114,14 @@ export default function ConversationPage() {
 
     setIsSending(true);
     try {
-      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content }),
-      });
+      const response = await fetch(
+        `/api/chat/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: content }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -151,7 +159,9 @@ export default function ConversationPage() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to send message");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message"
+      );
     } finally {
       setIsSending(false);
     }
