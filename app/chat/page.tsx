@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/app-header";
@@ -9,7 +10,7 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 import { StartConversationModal } from "@/components/chat/start-conversation-modal";
 import type { Conversation, Batch } from "@/lib/types";
 
-export default function ChatPage() {
+function ChatPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialStudentId = searchParams.get("student") || undefined;
@@ -115,5 +116,22 @@ export default function ChatPage() {
         initialTopicId={initialTopicId}
       />
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full flex-col">
+          <AppHeader title="Conversations" />
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        </div>
+      }
+    >
+      <ChatPageContent />
+    </Suspense>
   );
 }
