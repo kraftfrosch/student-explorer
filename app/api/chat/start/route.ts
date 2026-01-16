@@ -6,7 +6,7 @@ import { getStudentTopics, listStudents } from "@/lib/api"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { student_id, topic_id } = body
+    const { student_id, topic_id, set_type = "mini_dev" } = body
 
     if (!student_id || !topic_id) {
       return NextResponse.json(
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       topic_id,
       topic_name: topic.name,
       subject_name: topic.subject_name,
+      set_type,
       status: "open",
       messages_remaining: apiResponse.max_turns,
     })

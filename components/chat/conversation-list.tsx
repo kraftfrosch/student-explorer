@@ -95,6 +95,12 @@ export function ConversationList({
   );
 }
 
+const setTypeLabels: Record<string, string> = {
+  mini_dev: "Mini",
+  dev: "Dev",
+  eval: "Eval",
+};
+
 function ConversationItem({
   conversation,
   isActive,
@@ -122,9 +128,14 @@ function ConversationItem({
       <span className="text-sm text-muted-foreground">
         {conversation.topic_name}
       </span>
-      <span className="text-xs text-muted-foreground">
-        {conversation.subject_name}
-      </span>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {conversation.subject_name}
+        </span>
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+          {setTypeLabels[conversation.set_type] || conversation.set_type}
+        </Badge>
+      </div>
     </Link>
   );
 }

@@ -67,6 +67,7 @@ export interface Conversation {
   topic_id: string;
   topic_name: string;
   subject_name: string;
+  set_type: SetType;
   status: "open" | "closed";
   messages_remaining: number;
   created_at: string;

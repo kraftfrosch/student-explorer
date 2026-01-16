@@ -120,6 +120,7 @@ export function StartConversationModal({
         body: JSON.stringify({
           student_id: selectedStudentId,
           topic_id: selectedTopicId,
+          set_type: setType,
         }),
       })
 
