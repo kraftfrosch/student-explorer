@@ -87,7 +87,7 @@ function ChatPageContent() {
       <AppHeader title="Conversations" />
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-80 shrink-0 border-r">
+        <div className="w-96 shrink-0 border-r">
           <ConversationList
             conversations={conversations}
             batches={batches}
